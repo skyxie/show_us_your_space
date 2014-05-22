@@ -55,7 +55,9 @@ else
   threads = ARGV[0].to_i.times.map do |i|
     Thread.new do
       begin
-        report(vote().body)
+        Timeout::timeout(30) do
+          report(vote().body)
+        end
       rescue Exception => e
         puts "Thread #{i} died because of exception: #{e.message}"
       end
