@@ -5,6 +5,23 @@ require 'uri'
 require 'net/https'
 require 'nokogiri'
 
+def hidden_input
+  uri = URI("https://www.internetweekny.com/spaces")
+  http = Net::HTTP.new(uri.host, uri.port)
+
+  http.use_ssl=true
+  http.verify_mode = OpenSSL::SSL::VERIFY_NONE
+
+  req = Net::HTTP::Get.new(uri.request_uri)
+  resp = http.request(req)
+
+  doc = Nokogiri::HTML(resp.body)
+  {
+    "authenticity_token" => doc.css("input[name=authenticity_token]").attribute('value').text,
+    "utf8" => doc.css("input[name=utf8]").attribute('value').text
+  }
+end
+
 def vote
   uri = URI("https://www.internetweekny.com/spaces/vote")
   http = Net::HTTP.new(uri.host, uri.port)
@@ -13,7 +30,7 @@ def vote
   http.verify_mode = OpenSSL::SSL::VERIFY_NONE
 
   req = Net::HTTP::Post.new(uri.request_uri)
-  req.set_form_data({"vote"=>"12","commit"=>"Vote"})
+  req.set_form_data(hidden_input.merge({"vote"=>"12","commit"=>"Vote"}))
   http.request(req)
 end
 
@@ -29,25 +46,34 @@ def report html
 end
 
 results = report(vote().body)
+margin = ARGV[1] ? ARGV[1].to_i : 2
+puts "Checking that Animoto is winning by #{margin}"
 
-if results["Animoto"] > results["Adcade"] + 2
+if results["Animoto"] > results["Adcade"] + margin
   puts "Animoto is winning"
 else
-  threads = ARGV[0].to_i.times.map do
+  threads = ARGV[0].to_i.times.map do |i|
     Thread.new do
-      report(vote().body)
+      begin
+        report(vote().body)
+      rescue Exception => e
+        puts "Thread #{i} died because of exception: #{e.message}"
+      end
     end
   end
 
-  while(!threads.reject{|t| t.status.nil? || t.status == false}.empty?) do
+  loop do
+    sleep 1
+
     statuses = threads.inject({}) do |statuses, t|
       statuses[t.status] ||= 0
       statuses[t.status] += 1
       statuses
     end.to_a
+
     puts "THREADS STATUS: #{statuses.map{|pair| "#{pair[0]}:#{pair[1]}"}.join(" ")}"
 
-    sleep 1
+    break if threads.reject{|t| t.status.nil? || t.status == false}.empty?
   end
 end
 
