@@ -30,7 +30,7 @@ end
 
 results = report(vote().body)
 
-if results["Animoto"] > results["Adcade"]
+if results["Animoto"] > results["Adcade"] + 2
   puts "Animoto is winning"
 else
   threads = ARGV[0].to_i.times.map do
