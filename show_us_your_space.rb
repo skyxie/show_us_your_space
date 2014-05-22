@@ -9,6 +9,7 @@ def hidden_input
   uri = URI("https://www.internetweekny.com/spaces")
   http = Net::HTTP.new(uri.host, uri.port)
 
+  http.read_timeout = 500
   http.use_ssl=true
   http.verify_mode = OpenSSL::SSL::VERIFY_NONE
 
@@ -26,6 +27,7 @@ def vote
   uri = URI("https://www.internetweekny.com/spaces/vote")
   http = Net::HTTP.new(uri.host, uri.port)
 
+  http.read_timeout = 500
   http.use_ssl=true
   http.verify_mode = OpenSSL::SSL::VERIFY_NONE
 
